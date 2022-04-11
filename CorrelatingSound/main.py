@@ -16,7 +16,7 @@ import time
 
 #debug flags
 GENERATE_FILES = not True
-GENERATE_GRAPHS = not True
+GENERATE_GRAPHS = True
 DISTANCE = 51400
 
 
@@ -183,7 +183,6 @@ def Trim2ChRecording(recording):
     # and make sure to preserve the time delay between channels
     for channel in soundArray.T:
         counter = 0
-
         # find start of interesting part
         while abs(channel[counter]) <= threshold:
             firstSlice = counter
@@ -194,6 +193,8 @@ def Trim2ChRecording(recording):
 
         # find end of interesting part by traversing from the end of the clip
         counter = channel.size - 1
+        #pre-set lastSlice in case the later recording doesnt have a quiet end
+        lastSlice = counter
         while abs(channel[counter]) <= threshold:
             lastSlice = counter
             counter -= 1
@@ -266,6 +267,67 @@ if __name__ == '__main__':
         plt.plot(channel2AfterTrim, color='blue')
         plt.show()
 
+#Attempting to normalize volumes. Theres probably useful stuff here but I couldn't make sense of what I was doing
+    plt.title("Regular Channel")
+    plt.plot(channel1AfterTrim, color='blue')
+    plt.show()
+
+    plt.title("Delayed Channel before volume adjust")
+    plt.plot(channel2AfterTrim, color='blue')
+    plt.show()
+
+    volumeAdjustment = 5
+
+    print("Random Volume increase:" + str(volumeAdjustment) + "\n")
+
+    channel2VolumeBeforeIncrease = channel2AfterTrim[channel2AfterTrim > 0].mean()
+
+    channel2AfterVolume = channel2AfterTrim * (1 + volumeAdjustment)
+
+    plt.title("Delayed Channel after volume adjust")
+    plt.plot(channel2AfterVolume, color='blue')
+    plt.show()
+
+    channel2Volume = channel2AfterVolume[channel2AfterTrim > 0].mean()
+    channel1Volume = channel1AfterTrim[channel1AfterTrim > 0].mean()
+
+    print("Volume before increase for ch2:" + str(channel2VolumeBeforeIncrease))
+    print("Volumes: " + str(channel1Volume) + ", " + str(channel2Volume))
+
+    channel1Louder = LouderChannel(channel1Volume, channel2Volume)
+
+    channel2Louder = not channel1Louder
+
+    volumeDifference = abs(channel2Volume - channel1Volume)
+
+    factor = 0
+    if(channel1Louder):
+        factor = channel2Volume / channel1Volume
+        channel1AfterTrim *= factor
+    else:
+        #scale channel 2 down
+        factor = channel1Volume / channel2Volume
+        channel2AfterVolume *= factor
+    print("Factor scaled down by: " + str(factor) + "\n")
+
+    differenceArray = np.subtract(channel2AfterTrim, channel2AfterVolume)
+
+    channel2VolumeAfterDecrease = channel2AfterVolume[channel2AfterVolume > 0].mean()
+
+    print("Channel 2 Volume after decrease: " + str(channel2VolumeAfterDecrease))
+    print("Difference between channel 1 and 2 volume:" + str(abs(channel1Volume - channel2VolumeAfterDecrease)))
+
+    print("Error: " + str(abs(channel2VolumeAfterDecrease - channel2VolumeBeforeIncrease)))
+
+    plt.title("Array after increasing and decreasing")
+    plt.plot(channel2AfterVolume)
+    plt.show()
+
+
+    plt.title("Difference after inflating and deflating the array")
+    plt.plot(differenceArray)
+    plt.show()
+
     #DetectDelay function does not work
     #print("Delay after noise according to DetectDelay(): " + str(DetectDelay(channel1AfterTrim, channel2AfterTrim)))
 
@@ -282,59 +344,6 @@ if __name__ == '__main__':
     # print("Time with FFT: " + format(end - start))
 
     print("Delay according to magic: " + str(lag))
-
-#Attempting to normalize volumes. Theres probably useful stuff here but I couldn't make sense of what I was doing
-    # plt.title("Regular Channel")
-    # plt.plot(channel1AfterTrim, color='blue')
-    # plt.show()
-    #
-    # plt.title("Delayed Channel before volume adjust")
-    # plt.plot(channel2AfterTrim, color='blue')
-    # plt.show()
-    #
-    # volumeAdjustment = rand.uniform(0.01, 0.15)
-    #
-    # print("Random Volume increase:" + str(volumeAdjustment) + "\n")
-    #
-    # channel2AfterVolume = channel2AfterTrim * (1 + volumeAdjustment)
-    #
-    # plt.title("Delayed Channel after volume adjust")
-    # plt.plot(channel2AfterVolume, color='blue')
-    # plt.show()
-    #
-    #
-    # channel2Volume = channel2AfterVolume[channel2AfterVolume > 0].mean()
-    # channel1Volume = channel1AfterTrim[channel1AfterTrim > 0 ].mean()
-    #
-    # print("Volumes: " + str(channel1Volume) + ", " + str(channel2Volume))
-    #
-    # channel1Louder = LouderChannel(channel1Volume, channel2Volume)
-    #
-    # channel2Louder = not channel1Louder
-    #
-    # volumeDifference = abs(channel2Volume - channel1Volume)
-    #
-    # factor = 0
-    # print("What factor should be: " + str(channel1Volume/channel2Volume))
-    # if(channel1Louder):
-    #     factor = channel1Volume / channel2Volume
-    # else:
-    #     #scale channel 2 down
-    #     factor = channel1Volume / channel2Volume
-    #     channel2AfterVolume *= factor
-    # print("Factor scaled down by: " + str(factor) + "\n")
-    #
-    # differenceArray = np.subtract(channel2AfterTrim, channel2AfterVolume)
-    #
-    # plt.title("Array after increasing and decreasing")
-    # plt.plot(channel2AfterVolume)
-    # plt.show()
-    #
-    # plt.title("Difference after inflating and deflating the array")
-    # plt.plot(differenceArray)
-    # plt.show()
-
-
 
 
 
