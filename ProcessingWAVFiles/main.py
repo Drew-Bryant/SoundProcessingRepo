@@ -1,7 +1,9 @@
 
 #from scipy.io.wavfile import write
+#read and write to files with soundfile
 import soundfile as sf
 import multiprocessing as mp
+#recorded with sounddevice
 import sounddevice as sd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,7 +18,7 @@ def rec_audio(frames, which_device, storage_array, channel):
 if __name__ == '__main__':
     #mp.set_start_method('fork')
     recordings = mp.Queue()
-    seconds = 10
+    seconds = 5
     sampleRate = 44100
     handheldProcess = mp.Process(target=rec_audio, args=(int(seconds * sampleRate), 1, recordings, 2))
     webcamProcess = mp.Process(target=rec_audio, args=(int(seconds * sampleRate), 1, recordings, 1))
@@ -26,6 +28,16 @@ if __name__ == '__main__':
     print("Recording audio...")
     handheldProcess.join(15)
     handheldRecArray = recordings.get()
+
+    plt.title("Channel 1 No noise")
+    plt.plot(handheldRecArray[:, 0], color="red")
+    #
+    plt.show()
+
+    plt.title("Channel 2 No noise")
+    plt.plot(handheldRecArray[:, 1], color="red")
+    #
+    plt.show()
     # sf.write('TwoChannelStereo.wav', handheldRecArray, sampleRate)  # Save as WAV file
     # webcamProcess.join(1)
     # webcamRecArray = recordings.get()
@@ -71,55 +83,47 @@ if __name__ == '__main__':
     # x = seconds
     # y = handheldRecArray
     #
-    noise = np.random.normal(0, .001, handheldRecArray.shape)
-    new_signal = handheldRecArray + noise
-    noise2 = np.random.normal(0, .0002, handheldRecArray.shape)
-    new_signal2 = handheldRecArray + noise2
-    noise3 = np.random.normal(0, .0003, handheldRecArray.shape)
-    new_signal3 = handheldRecArray + noise3
+    # noise = np.random.normal(0, .001, handheldRecArray.shape)
+    # new_signal = handheldRecArray + noise
+    # noise2 = np.random.normal(0, .0002, handheldRecArray.shape)
+    # new_signal2 = handheldRecArray + noise2
+    # noise3 = np.random.normal(0, .0003, handheldRecArray.shape)
+    # new_signal3 = handheldRecArray + noise3
     #sf.write('OneChannelMono.wav', webcamProcess, sampleRate)  # Save as WAV file
 
     #how to print
     #when doing multi channel stuff
-    plt.title("Channel 1 No noise")
-    plt.plot(handheldRecArray[:, 0], color="red")
-    #
-    plt.show()
 
-    plt.title("Channel 2 No noise")
-    plt.plot(handheldRecArray[:, 1], color="red")
-    #
-    plt.show()
 
-    plt.title("Channel 1 With Noise")
-    plt.plot(new_signal[:, 0], color="red")
+    # plt.title("Channel 1 With Noise")
+    # plt.plot(new_signal[:, 0], color="red")
+    # #
+    # plt.show()
     #
-    plt.show()
-
-    plt.title("Channel 2 With noise")
-    plt.plot(new_signal[:, 1], color="red")
+    # plt.title("Channel 2 With noise")
+    # plt.plot(new_signal[:, 1], color="red")
+    # #
+    # plt.show()
     #
-    plt.show()
-
-    plt.title("Channel 1 With Noise")
-    plt.plot(new_signal2[:, 0], color="red")
+    # plt.title("Channel 1 With Noise")
+    # plt.plot(new_signal2[:, 0], color="red")
+    # #
+    # plt.show()
     #
-    plt.show()
-
-    plt.title("Channel 2 With noise")
-    plt.plot(new_signal2[:, 1], color="red")
+    # plt.title("Channel 2 With noise")
+    # plt.plot(new_signal2[:, 1], color="red")
+    # #
+    # plt.show()
     #
-    plt.show()
-
-    plt.title("Channel 1 With Noise")
-    plt.plot(new_signal3[:, 0], color="red")
+    # plt.title("Channel 1 With Noise")
+    # plt.plot(new_signal3[:, 0], color="red")
+    # #
+    # plt.show()
     #
-    plt.show()
-
-    plt.title("Channel 2 With noise")
-    plt.plot(new_signal3[:, 1], color="red")
-    #
-    plt.show()
+    # plt.title("Channel 2 With noise")
+    # plt.plot(new_signal3[:, 1], color="red")
+    # #
+    # plt.show()
 
     # shiftFactor = int(newArray.size/5)
     # newArray.resize(newArray.size + shiftFactor)
