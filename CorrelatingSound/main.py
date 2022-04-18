@@ -137,8 +137,10 @@ def CrossCorrelateNoFFT(ch1, ch2):
     totalSum = 0
     startTime = 0
     allTime = 0
+    ch2Rev = np.flip(ch2)
     for diagonal in range(ch1.size):
-        if(True):
+        #only do every 10th diagonal so the program finishes before the heat death of the universe
+        if(diagonal % 10 == 0):
             if(diagonal % 1000 == 0):
                 endTime = time.time()
                 curTime = endTime - startTime
@@ -149,7 +151,7 @@ def CrossCorrelateNoFFT(ch1, ch2):
             row = diagonal
             col = 0
             while (row >= 0):
-                currentSum += ch1[row] + ch2[col]
+                currentSum += ch1[row] * ch2Rev[col]
                 row -= 1
                 col += 1
             correlationArray[diagonal] = currentSum
