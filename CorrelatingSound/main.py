@@ -2,6 +2,7 @@
 import soundfile as sf
 import multiprocessing as mp
 #scipy.signal is used for calculating the time delay in samples
+from numpy import float16
 from scipy import signal
 #sounddevice is used for recording audio
 import sounddevice as sd
@@ -16,7 +17,7 @@ import time
 
 #debug flags
 GENERATE_FILES = not True
-GENERATE_GRAPHS = True
+GENERATE_GRAPHS = not True
 DISTANCE = 51400
 
 
@@ -124,6 +125,48 @@ def GenerateGraph(array, channels):
         plt.title('Channel ' + str(x + 1))
         plt.plot(array[:, x], color="red")
         plt.show()
+
+def CrossCorrelateNoFFT(ch1, ch2):
+    diagonals = ch1.size + ch2.size - 1
+    correlationArray = np.zeros(diagonals)
+
+    #create the cross correlation matrix
+    #which is an N x N matrix where N = size of each channel
+    #and each spot in the matrix contains the product of row * col
+    ##from the correlation matrix, sum each diagonal to get the array of correlations
+    totalSum = 0
+    startTime = 0
+    allTime = 0
+    for diagonal in range(ch1.size):
+        if(True):
+            if(diagonal % 1000 == 0):
+                endTime = time.time()
+                curTime = endTime - startTime
+                allTime += curTime
+                print("Current Diagonal: " + str(diagonal) + ", time since last batch: " + str(curTime) + ", Total Time: " + str(allTime) + "\n")
+                startTime = time.time()
+            currentSum = 0
+            row = diagonal
+            col = 0
+            while (row >= 0):
+                currentSum += ch1[row] + ch2[col]
+                row -= 1
+                col += 1
+            correlationArray[diagonal] = currentSum
+    # for diagonal in range(ch1.size):
+    #     if(diagonal % 1000 == 0):
+    #         tyme = time.time()
+    #         print("Current Diagonal: " + str(diagonal) + " and time: " + str(tyme) + "\n")
+    #     currentSum = 0
+    #     row = diagonal
+    #     col = 0
+    #     while (row >= 0):
+    #         currentSum += ch1[row] + ch2[col]
+    #         row -= 1
+    #         col += 1
+    #     correlationArray[ch1.size + diagonal] = currentSum
+    return correlationArray
+
 
 # #this function does not work
 def DetectDelay(ch1, ch2):
@@ -249,6 +292,7 @@ if __name__ == '__main__':
     channel1AfterTrim, channel2AfterTrim = Trim2ChRecording(soundArray)
 
     #adding noise
+    #try uniform or poisson
     noise = np.random.normal(0, .005, channel2AfterTrim.shape)
 
     if GENERATE_GRAPHS:
@@ -268,13 +312,13 @@ if __name__ == '__main__':
         plt.show()
 
 #Attempting to normalize volumes. Theres probably useful stuff here but I couldn't make sense of what I was doing
-    plt.title("Regular Channel")
-    plt.plot(channel1AfterTrim, color='blue')
-    plt.show()
+        plt.title("Regular Channel")
+        plt.plot(channel1AfterTrim, color='blue')
+        plt.show()
 
-    plt.title("Delayed Channel before volume adjust")
-    plt.plot(channel2AfterTrim, color='blue')
-    plt.show()
+        plt.title("Delayed Channel before volume adjust")
+        plt.plot(channel2AfterTrim, color='blue')
+        plt.show()
 
     volumeAdjustment = 5
 
@@ -284,9 +328,10 @@ if __name__ == '__main__':
 
     channel2AfterVolume = channel2AfterTrim * (1 + volumeAdjustment)
 
-    plt.title("Delayed Channel after volume adjust")
-    plt.plot(channel2AfterVolume, color='blue')
-    plt.show()
+    if GENERATE_GRAPHS:
+        plt.title("Delayed Channel after volume adjust")
+        plt.plot(channel2AfterVolume, color='blue')
+        plt.show()
 
     channel2Volume = channel2AfterVolume[channel2AfterTrim > 0].mean()
     channel1Volume = channel1AfterTrim[channel1AfterTrim > 0].mean()
@@ -319,14 +364,15 @@ if __name__ == '__main__':
 
     print("Error: " + str(abs(channel2VolumeAfterDecrease - channel2VolumeBeforeIncrease)))
 
-    plt.title("Array after increasing and decreasing")
-    plt.plot(channel2AfterVolume)
-    plt.show()
+    if GENERATE_GRAPHS:
+        plt.title("Array after increasing and decreasing")
+        plt.plot(channel2AfterVolume)
+        plt.show()
 
 
-    plt.title("Difference after inflating and deflating the array")
-    plt.plot(differenceArray)
-    plt.show()
+        plt.title("Difference after inflating and deflating the array")
+        plt.plot(differenceArray)
+        plt.show()
 
     #DetectDelay function does not work
     #print("Delay after noise according to DetectDelay(): " + str(DetectDelay(channel1AfterTrim, channel2AfterTrim)))
@@ -336,9 +382,26 @@ if __name__ == '__main__':
 
     #this figures out the correct frame delay even with uniform noise on one channel
     # creates a cross correlation array using fft methods
-    correlation = signal.correlate(channel1AfterTrim - np.mean(channel1AfterTrim), channel2AfterTrim - np.mean(channel2AfterTrim), method='fft', mode="full")
+    fftCorrelation = signal.correlate(channel1AfterTrim - np.mean(channel1AfterTrim), channel2AfterTrim - np.mean(channel2AfterTrim), method='fft', mode="full")
     lags = signal.correlation_lags(len(channel1AfterTrim), len(channel2AfterTrim), mode="full")
-    lag = lags[np.argmax(correlation)]
+    lag = lags[np.argmax(fftCorrelation)]
+
+    manualCorrelation = CrossCorrelateNoFFT(channel1AfterTrim, channel2AfterTrim)
+    convolution = signal.convolve(channel1AfterTrim, channel2AfterTrim, mode='same')
+    print(fftCorrelation)
+    print(convolution)
+
+    print("Data type of channel arrays: " + str(channel1AfterTrim.dtype))
+
+    plt.title("FFT correlation")
+    plt.plot(fftCorrelation)
+    plt.show()
+
+    plt.title("Manual correlation")
+    plt.plot(manualCorrelation)
+    plt.show()
+
+
 
     # end = time.time()
     # print("Time with FFT: " + format(end - start))
