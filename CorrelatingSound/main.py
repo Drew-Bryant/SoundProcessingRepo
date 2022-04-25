@@ -15,12 +15,80 @@ import random as rand
 #used for testing processing times
 import time
 
+
+
+import math
+
+import csv
+
 #debug flags
-GENERATE_FILES = not True
-GENERATE_GRAPHS = not True
+GENERATE_FILES = True
+GENERATE_GRAPHS = True
 DISTANCE = 51400
 
+def GenerateTrainingSet(seconds, sampleRate, device, channels, setSize):
+    header = ['Clip #', 'Clip Delay(frames)', 'Angle to Sound(deg)', 'Total Frames']
 
+    with open('trainingValues.csv', 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+
+        # write the header
+        writer.writerow(header)
+    monoRecording = RecordAudioClip(int(seconds * sampleRate), device, channels)
+
+    # duplicate result into two arrays
+        # write the data
+    for recording in range(1, setSize + 1):
+
+        delayedChannel = np.array(monoRecording)
+        regularChannel = np.array(monoRecording)
+
+        # calculate an offset and new size to shift one array
+        offset = int(rand.uniform(-128, 128))
+        newSize = delayedChannel.size + 128
+
+        print("The frame offset is: " + str(offset))
+
+        # resize both arrays and roll the delayed one by the offset
+        delayedChannel.resize(newSize)
+        delayedChannel = np.roll(delayedChannel, offset)
+
+        regularChannel.resize(newSize)
+
+        stereoArray = np.vstack((regularChannel, delayedChannel)).T
+
+        if GENERATE_GRAPHS and recording == 1:
+            plt.title("Regular Channel Should Look Like This")
+            plt.plot(stereoArray[:, 0], color="red")
+            #
+            plt.show()
+
+            plt.title("Delayed Channel Should Look Like This")
+            plt.plot(stereoArray[:, 1], color="red")
+            #
+            plt.show()
+        fName = "TrainingClip" + str(recording) + ".wav"
+        sf.write(fName, stereoArray, sampleRate)
+
+        rad = math.acos(343 * (offset / sampleRate))
+        angle = (rad * 180) / math.pi
+
+        data = [str(recording), str(offset) , str(int(angle)) ,  delayedChannel.size]
+
+        with open('trainingValues.csv', 'a', encoding='UTF8', newline='') as f:
+            writer = csv.writer(f)
+
+            # write the data
+            writer.writerow(data)
+
+        ####################################################################
+        #This part of the function is for testing that I can read files in correctly
+        ##when reading in an array, you get back a 2 object array where
+        #index 0 is a 2 column array of the channels, and index 1 is the sample rate
+        #But we normally just want the channels
+        readArray = sf.read('DelayTesting.wav')[0]
+        print(readArray)
+        # stereoArray = np.concatenate((regularChannel, delayedChannel), axis=0)
 #generate a recording that is duplicated into two different recordings. Assumes a one channel initial recording
 #where the second channel is delayed randomly by 1/3 to 1/10th of the length of the clip
 #Args:
@@ -38,7 +106,7 @@ def GenerateFiles(seconds, sampleRate, device, channels, file):
     regularChannel = np.array(monoRecording)
 
     # calculate an offset and new size to shift one array
-    offset = int(delayedChannel.size / rand.uniform(3.0, 10.0))
+    offset = int(rand.uniform(1, 128))
     newSize = delayedChannel.size + offset
 
     print("The frame offset is: " + str(offset))
@@ -130,14 +198,18 @@ def CrossCorrelateNoFFT(ch1, ch2):
     diagonals = ch1.size + ch2.size - 1
     correlationArray = np.zeros(diagonals)
 
-    #create the cross correlation matrix
-    #which is an N x N matrix where N = size of each channel
-    #and each spot in the matrix contains the product of row * col
-    ##from the correlation matrix, sum each diagonal to get the array of correlations
-    totalSum = 0
+
+
+    #Timing variables to track progress
     startTime = 0
     allTime = 0
+
+    #reverse the second array for the calculation
     ch2Rev = np.flip(ch2)
+    #Do the cross correlation, with transient matrix calculations
+    #and each spot in the 'matrix' contains the product of row * col
+    #from the correlation matrix, sum each diagonal to get the array of correlations
+    #only do one array's worth of calculations
     for diagonal in range(ch1.size):
         #only do every 10th diagonal so the program finishes before the heat death of the universe
         if(diagonal % 10 == 0):
@@ -274,6 +346,18 @@ def Trim2ChRecording(recording):
 
 
 if __name__ == '__main__':
+    fileName = 'DelayTesting.wav'
+    if GENERATE_FILES:
+        #set variables and call recorder
+        seconds = 5
+        sampleRate = 44100
+        device = 1
+        channels = 2
+        setSize = 50
+        GenerateTrainingSet(seconds, sampleRate, device, channels, setSize)
+
+
+def stuff():
 
     fileName = 'DelayTesting.wav'
     if GENERATE_FILES:
